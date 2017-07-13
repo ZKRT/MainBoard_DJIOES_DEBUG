@@ -22,9 +22,9 @@ size_t STM32F4::send(const uint8_t* buf, size_t len)
 
   while (len--)
   {
-    while (USART_GetFlagStatus(USART3, USART_FLAG_TC) == RESET)
+    while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET)
       ;
-    USART_SendData(USART3, *p++);
+    USART_SendData(USART1, *p++);
   }
   return 1;
 }

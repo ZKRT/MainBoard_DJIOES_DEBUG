@@ -98,7 +98,7 @@ void USART1_Config(void)  //DJI USART PORT
   USART1_Gpio_Config();
 
   USART_InitTypeDef USART_InitStructure;
-  RCC_APB1PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
 
   USART_InitStructure.USART_BaudRate = 230400;
   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
@@ -130,7 +130,7 @@ void USARTxNVIC_Config()
   NVIC_InitTypeDef NVIC_InitStructure_USART3;
   NVIC_InitStructure_USART3.NVIC_IRQChannelPreemptionPriority = 0x03;
   NVIC_InitStructure_USART3.NVIC_IRQChannelSubPriority = 0x02;
-  NVIC_InitStructure_USART3.NVIC_IRQChannel = USART2_IRQn;
+  NVIC_InitStructure_USART3.NVIC_IRQChannel = USART3_IRQn;
   NVIC_InitStructure_USART3.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure_USART3);
 }
