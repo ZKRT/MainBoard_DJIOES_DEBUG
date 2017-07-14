@@ -14,6 +14,12 @@
 #define	RECEIVE_H
 #include "main.h"
 
+enum USER_FLIGHT_CTRL
+{ 
+  VEL_USER_FLIGHT_CTRL = 0x01,
+  POS_USER_FLIGHT_CTRL
+};
+
 #define MAX_RECEIVE 32
 
 class TerminalCommand

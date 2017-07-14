@@ -17,6 +17,7 @@
 
 using namespace DJI::onboardSDK;
 extern FlightData flightData;
+int user_flight_ctrl;
 
 /*
  * @brief Helper function to assemble two bytes into a float number
@@ -65,8 +66,8 @@ void TerminalCommand::terminalCommandHandler(CoreAPI* api, Flight* flight)
 
   case 0x02:
     api->setControl(cmdIn[3]);
-    break;
-
+		user_flight_ctrl = 0;
+	break;
   case 0x03:
     flight->setArm(cmdIn[3]);
     break;
@@ -155,6 +156,14 @@ void TerminalCommand::terminalCommandHandler(CoreAPI* api, Flight* flight)
     }
     break;
 
+	case 0x0a:
+		user_flight_ctrl = VEL_USER_FLIGHT_CTRL;
+		printf("flight vel\r\n");
+		break;
+	case 0x0b:
+		user_flight_ctrl = POS_USER_FLIGHT_CTRL;
+		printf("flight pos\r\n");
+		break;
   default:
     break;
   }
