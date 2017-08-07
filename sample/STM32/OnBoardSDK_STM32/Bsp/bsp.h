@@ -9,10 +9,9 @@
  *
  * */
 
-#ifndef  BSP_H 
-#define  BSP_H
+#ifndef BSP_H
+#define BSP_H
 
 void BSPinit();
-
 
 #endif // BSP_H

@@ -9,23 +9,34 @@
  *
  * */
 
+#include "stm32f4xx.h"
 #include "BspUsart.h"
-#include "DJI_API.h"
-#include "DJI_HardDriver.h"
-#include "DJI_Flight.h"
+#include "timer.h"
+
 extern int Rx_Handle_Flag;
 
-using namespace DJI::onboardSDK;
-extern CoreAPI defaultAPI;
-extern CoreAPI *coreApi;
-extern Flight flight;
-extern FlightData flightData;
+using namespace DJI::OSDK;
 
-extern unsigned char come_data;
-extern unsigned char Rx_length;
-extern int Rx_adr;
-extern int Rx_Handle_Flag;
-extern unsigned char Rx_buff[];
+extern Vehicle  vehicle;
+extern Vehicle* v;
+extern Control  control;
+
+extern bool           isFrame;
+bool                  isACKProcessed    = false;
+bool                  ackReceivedByUser = false;
+extern RecvContainer  receivedFramie;
+extern RecvContainer* rFrame;
+
+// extern CoreAPI defaultAPI;
+// extern CoreAPI *coreApi;
+// extern Flight flight;
+// extern FlightData flightData;
+
+extern uint8_t come_data;
+extern uint8_t Rx_length;
+extern int     Rx_adr;
+extern int     Rx_Handle_Flag;
+extern uint8_t Rx_buff[];
 
 void USART3_Gpio_Config(void)
 {
@@ -135,26 +146,93 @@ void USARTxNVIC_Config()
   NVIC_Init(&NVIC_InitStructure_USART3);
 }
 
-void UsartConfig()
+void
+UsartConfig()
 {
   USART3_Config();
   USART1_Config();
   USARTxNVIC_Config();
 }
-
-#ifdef __cplusplus
-extern "C"
+/*
+DJI::OSDK::ACK::ErrorCode
+waitForACK()
 {
+  ACK::ErrorCode ack;
+  ack.data = ACK_NO_RESPONSE_ERROR;
+  memset(&(ack.data), 0, sizeof(ack.data));
+  uint32_t next500MilTick;
+	uint8_t cmd[] = {rFrame->recvInfo.cmd_set, rFrame->recvInfo.cmd_id};
+
+  //	next500MilTick = v->protocolLayer->getDriver()->getTimeStamp() + 500;
+
+  //	while(rFrame->dispatchInfo.isCallback != true &&
+  //		v->protocolLayer->getDriver()->getTimeStamp() < next500MilTick)
+  while (true)
+  {
+    if (isACKProcessed == true)
+    {
+      if (rFrame->recvInfo.cmd_set == DJI::OSDK::CMD_SET_ACTIVATION &&
+          rFrame->recvInfo.cmd_id == DJI::OSDK::CMD_ID_ACTIVATE)
+      {
+        ack.data = rFrame->recvData.ack;
+        ack.info = rFrame->recvInfo;
+
+        return ack;
+      }
+      else if (rFrame->recvInfo.cmd_set == DJI::OSDK::CMD_SET_SUBSCRIBE &&
+               rFrame->recvInfo.cmd_id ==
+                 DJI::OSDK::CMD_ID_SUBSCRIBE_VERSION_MATCH)
+      {
+        ack.data = rFrame->recvData.ack;
+        ack.info = rFrame->recvInfo;
+
+        return ack;
+      }
+      else if (rFrame->recvInfo.cmd_set == DJI::OSDK::CMD_SET_SUBSCRIBE &&
+               rFrame->recvInfo.cmd_id ==
+                 DJI::OSDK::CMD_ID_SUBSCRIBE_ADD_PACKAGE)
+      {
+        ack.data = rFrame->recvData.ack;
+        ack.info = rFrame->recvInfo;
+
+        return ack;
+      }
+      else if (rFrame->recvInfo.cmd_set == DJI::OSDK::CMD_SET_CONTROL &&
+               rFrame->recvInfo.cmd_id == DJI::OSDK::CMD_ID_TASK)
+      {
+        ack.data = rFrame->recvData.ack;
+        ack.info = rFrame->recvInfo;
+
+        return ack;
+      }
+    }
+  }
+
+  // return ack;
+}
+*/
+#ifdef __cplusplus
+extern "C" {
 #endif //__cplusplus
 
-void USART1_IRQHandler(void)
+void
+USART1_IRQHandler(void)
 {
   if (USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == SET)
   {
-    coreApi->byteHandler(USART_ReceiveData(USART1)); //Data from M100 were committed to "byteHandler"
+    isACKProcessed = false;
+    isFrame = v->protocolLayer->byteHandler(USART_ReceiveData(USART1), rFrame);
+    if (isFrame == true)
+    {
+      //! Trigger default or user defined callback
+      v->processReceivedData(*rFrame);
+
+      //! Reset
+      isFrame        = false;
+      isACKProcessed = true;
+    }
   }
 }
-
 
 #ifdef __cplusplus
 }
