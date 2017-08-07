@@ -8,11 +8,13 @@
  *  Copyright 2016 DJI. All right reserved.
  *
  * */
-
+ 
+#include "stm32f4xx.h"
 #include "bsp.h"
 #include "main.h"
 
-void BSPinit()
+void
+BSPinit()
 {
   UsartConfig();
   SystickConfig();

@@ -11,26 +11,21 @@
 
 #include "Activate.h"
 
-extern CoreAPI defaultAPI;
-extern CoreAPI *coreApi;
-extern Flight flight;
-extern FlightData flightData;
+extern Vehicle  vehicle;
+extern Vehicle* v;
 
 void
-User_Activate ()
+userActivate()
 {
+  //! At your DJI developer account look for: app_key and app ID
+
   static char key_buf[65] = "ac5100a048cc4c4a08ce23200481d058d7455e69b8668fc0e49f29bd856c185a"; /*"your app_key"*/
 
-  ActivateData user_act_data;
-  user_act_data.ID = 1031967; /*need your key in number like: 111000*/
-
-
-  //! Change the version string to your platform/version as defined in DJI_Version.h
-  //! Starting from OSDK 3.2.1, you do not need to do this. Instead, call droneVersion before activation.
-//  user_act_data.version = versionM100_31;
+  DJI::OSDK::Vehicle::ActivateData user_act_data;
+  user_act_data.ID = 1031967; /*your app ID here*/
 
   user_act_data.encKey = key_buf;
 
-  coreApi->activate (&user_act_data);
-
+  v->activate(&user_act_data);
+	
 }

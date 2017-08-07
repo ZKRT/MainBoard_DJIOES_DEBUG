@@ -1,10 +1,14 @@
+cmake_minimum_required(VERSION 2.8)
 project(djiosdk-core)
 
 if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug CACHE STRING
+    set(CMAKE_BUILD_TYPE Release CACHE STRING
             "Choose the type of build Debug/Release/Coverage:"
             FORCE)
 endif ()
+
+# Add module path for <name>.cmake conf files
+set(CURRENT_CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
 ## Set compiler flags accordingly to the build type
 if (MSVC)
@@ -33,7 +37,7 @@ if (COVERAGE)
 endif ()
 
 if (CMAKE_BUILD_TYPE MATCHES "Release")
-  set(CMAKE_CXX_FLAGS_RELASE "${COMMON_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+  set(CMAKE_CXX_FLAGS_RELEASE "${COMMON_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
 endif ()
 
 
@@ -41,87 +45,117 @@ endif ()
 ## Build ##
 ###########
 
-set(OSDK_PLATFORM_SRCS ${CMAKE_SOURCE_DIR}/platform/linux)
-
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  inc
-  test
-  ${OSDK_PLATFORM_SRCS}/inc
+  api/inc
+  protocol/inc
+  hal/inc
+  utility/inc
+  platform/default/inc
 )
 
+# Use this if more platform is supported
+if (CMAKE_SYSTEM_NAME MATCHES Linux)
+  include_directories(
+    platform/linux/inc
+  )
+endif()
+
+
 ## Declare a C++ library
-FILE(GLOB OSDK_LIB_SRCS src/*.cpp inc/*.h)
+FILE(GLOB OSDK_LIB_SRCS
+  api/inc/*.hpp
+  api/src/*.cpp
+  protocol/src/*.cpp
+  hal/src/*.cpp
+  utility/src/*.cpp
+  platform/default/src/*.cpp
+  )
+
+# Use this if more platform is supported
+if (CMAKE_SYSTEM_NAME MATCHES Linux)
+  FILE(GLOB OSDK_LIB_SRCS ${OSDK_LIB_SRCS} platform/linux/src/*.cpp)
+endif()
+
 add_library(${PROJECT_NAME}
   STATIC
   ${OSDK_LIB_SRCS})
 
-INSTALL(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION ${EXECUTABLE_OUTPUT_PATH}
-  LIBRARY DESTINATION ${EXECUTABLE_OUTPUT_PATH}
-  ARCHIVE DESTINATION ${EXECUTABLE_OUTPUT_PATH}
-  CONFIGURATIONS Debug
-  COMPONENT library)
+target_link_libraries(${PROJECT_NAME} pthread)
 
-INSTALL(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION ${EXECUTABLE_OUTPUT_PATH}
-  LIBRARY DESTINATION ${EXECUTABLE_OUTPUT_PATH}
-  ARCHIVE DESTINATION ${EXECUTABLE_OUTPUT_PATH}
-  CONFIGURATIONS Release
-  COMPONENT library)
+################
+# Installation #
+################
 
-if(GTEST)
-  # Add gtest based cpp test target and link libraries
-  if (CMAKE_SYSTEM_NAME MATCHES Linux)
-    if(DJI_API_TEST_LIBRARY)
-      add_library(DJI_APITest STATIC
-        test/DJI_APITest.cpp
-        test/DJI_Environment.cpp
-        ${OSDK_LIB_SRCS}
-        ${OSDK_PLATFORM_SRCS}/src/LinuxSerialDevice.cpp
-        ${OSDK_PLATFORM_SRCS}/src/LinuxThread.cpp)
-    else()
-      add_executable(DJI_APITest
-        test/DJI_APITest.cpp
-        test/DJI_ActivateTest.cpp
-        test/DJI_CameraTest.cpp
-        test/DJI_Environment.cpp
-        test/DJI_HotPointTest.cpp
-        test/DJI_Main.cpp
-        test/DJI_SDKVersionTest.cpp
-        test/DJI_WayPointTest.cpp
-        test/DJI_FlightTest.cpp
-        test/DJI_Utility.cpp
-        test/DJI_VirtualRCTest.cpp
-      )
-    endif()
+set(INSTALL_LIB_DIR lib)
+set(INSTALL_BIN_DIR bin)
+set(INSTALL_INCLUDE_DIR include/djiosdk)
+set(DEF_INSTALL_CMAKE_DIR lib/cmake/djiosdk)
+set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR})
+foreach(p LIB BIN INCLUDE CMAKE)
+  set(var INSTALL_${p}_DIR)
+  if(NOT IS_ABSOLUTE "${${var}}")
+    set(${var} "${CMAKE_INSTALL_PREFIX}/${${var}}")
+  endif()
+endforeach()
 
-    add_dependencies(DJI_APITest googletest)
-    add_dependencies(DJI_APITest rapidjson)
+# Add all targets to the build-tree export set
+export(TARGETS djiosdk-core
+  FILE "${PROJECT_BINARY_DIR}/djiosdkTargets.cmake")
 
-    # Link with platform specific impl.
-    target_link_libraries(DJI_APITest djiosdk-platform)
-  
-    if (TARGET DJI_APITest)
-      if (MSVC)
-          qt5_use_modules(DJI_APITest Core SerialPort)
-          target_link_libraries(DJI_APITest
-                  ${PROJECT_NAME}
-                  ${GTEST_LIBRARIES}
-                  ${Qt5Widgets_LIBRARIES})
-      endif (MSVC)
-      if (CMAKE_SYSTEM_NAME MATCHES Linux)
-          target_link_libraries(DJI_APITest
-                  ${PROJECT_NAME}
-                  ${gtest_binary_dir}/googlemock/gtest/libgtest.a
-                  ${gtest_binary_dir}/googlemock/gtest/libgtest_main.a
-                  ${RAPIDJSON_LIBRARIES}
-                  pthread)
-      endif ()
-    endif ()
+# Export the package for use from the build-tree
+# (this registers the build-tree with a global CMake-registry)
+export(PACKAGE djiosdk)
 
-    add_test(${EXECUTABLE_OUTPUT_PATH}/DJI_APITest ${EXECUTABLE_OUTPUT_PATH}/DJI_APITest)
-  endif ()
+# Create the DJIOSDKConfig.cmake and DJIOSDKConfigVersion files
+file(RELATIVE_PATH REL_INCLUDE_DIR "${INSTALL_CMAKE_DIR}"
+   "${INSTALL_INCLUDE_DIR}")
+# ... for the build tree
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
+configure_file(${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfig.cmake.in
+  "${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfig.cmake" @ONLY)
+
+# ... for the install tree
+set(CONF_INCLUDE_DIRS "\${DJIOSDK_CMAKE_DIR}/${REL_INCLUDE_DIR}")
+
+configure_file(${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfig.cmake.in
+  "${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfig.cmake" @ONLY)
+
+# ... for both
+configure_file(${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfigVersion.cmake.in
+  "${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfigVersion.cmake" @ONLY)
+
+# Install the DJIOSDKConfig.cmake and DJIOSDKConfigVersion.cmake
+install(FILES
+  "${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfig.cmake"
+  "${CURRENT_CMAKE_MODULE_PATH}/DJIOSDKConfigVersion.cmake"
+  DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT dev)
+
+# Install the export set for use with the install-tree
+install(EXPORT djiosdkTargets DESTINATION
+  "${INSTALL_CMAKE_DIR}" COMPONENT dev)
+
+FILE(GLOB OSDK_LIB_HEADERS
+  api/inc/*.h*
+  protocol/inc/*.h*
+  hal/inc/*.h*
+  utility/inc/*.h*
+  default/inc/*.h*
+  platform/linux/inc/*.h*
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  PUBLIC_HEADER "${OSDK_LIB_HEADERS}")
+
+if(NOT INSTALL_LIB_DIR)
+  message(STATUS, "Install to build folder" )
+  set(INSTALL_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/lib")
+  set(INSTALL_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/include")
 endif()
 
+install(TARGETS ${PROJECT_NAME}
+  # IMPORTANT: Add the osdk-core library to the "export-set"
+  EXPORT djiosdkTargets
+  ARCHIVE DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
+  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}" COMPONENT dev)

@@ -1,6 +1,6 @@
 /*! @file main.cpp
- *  @version 3.1.8
- *  @date Aug 05 2016
+ *  @version 3.3
+ *  @date May 2017
  *
  *  @brief
  *  An exmaple program of DJI-onboard-SDK portable for stm32
@@ -20,112 +20,186 @@
  *******************************************************************************
  * */
 
+#include "stm32f4xx.h"
 #include "main.h"
 
+#define sample_flag 7;
+#ifdef FLIGHT_CONTROL_SAMPLE
+#define sample_flag 1
+#elif HOTPOINT_MISSION_SAMPLE
+#define sample_flag 2
+#elif WAYPOINT_MISSIOM_SAMPLE
+#define sample_flag 3
+#elif CAMERA_GIMBAL_SAMPLE
+#define sample_flag 4
+#elif MOBILE_SAMPLE
+#define sample_flag 5
+#elif TELEMETRY_SAMPLE
+#define sample_flag 6
+#endif
 
-#undef USE_ENCRYPT
+int sampleToRun = sample_flag;
+
 /*-----------------------DJI_LIB VARIABLE-----------------------------*/
-using namespace DJI::onboardSDK;
+using namespace DJI::OSDK;
 
-HardDriver* driver = new STM32F4;
-CoreAPI defaultAPI = CoreAPI(driver);
-CoreAPI *coreApi = &defaultAPI;
-
-Flight flight = Flight(coreApi);
-FlightData flightData;
-FlightData flightData_zkrtctrl;
-
-VirtualRC virtualrc = VirtualRC(coreApi);
-VirtualRCData myVRCdata =
-{ 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,
-    1024, 1024 };
+bool           threadSupport = false;
+bool           isFrame       = false;
+RecvContainer  receivedFrame;
+RecvContainer* rFrame  = &receivedFrame;
+Vehicle        vehicle = Vehicle(threadSupport);
+Vehicle*       v       = &vehicle;
 
 extern TerminalCommand myTerminal;
-extern LocalNavigationStatus droneState;
-extern uint8_t myFreq[16];
-extern int user_flight_ctrl;
-		
-int main()
+
+int
+main()
 {
   BSPinit();
-  delay_nms(30);
-  printf("This is the example App to test DJI onboard SDK on STM32F4Discovery Board! \r\n");
-  printf("Refer to \r\n");
-  printf("https://developer.dji.com/onboard-sdk/documentation/github-platform-docs/STM32/README.html \r\n");
-  printf("for supported commands!\r\n");
-  printf("Board Initialization Done!\r\n");
-  delay_nms(1000);
 
+  delay_nms(30);
+  printf("STM32F4Discovery Board initialization finished!\r\n");
+
+  char     func[50];
   uint32_t runOnce = 1;
-  uint32_t next500MilTick;
-	uint32_t next20MilTick;
-	
+
   while (1)
   {
     // One time automatic activation
     if (runOnce)
     {
       runOnce = 0;
-      coreApi->setBroadcastFreq(myFreq);
-      delay_nms(50);
 
-      // The Local navigation example will run in broadcast call back function,
-      // immediate after GPS position is updated
-      coreApi->setBroadcastCallback(myRecvCallback,(DJI::UserData)(&droneState));
+      // Check USART communication
+      if (!v->protocolLayer->getDriver()->getDeviceStatus())
+      {
+        printf("USART communication is not working.\r\n");
+        delete (v);
+        return -1;
+      }
 
-      //! Since OSDK 3.2.1, the new versioning system does not require you to set version.
-      //! It automatically sets activation version through a call to getDroneVersion.
-      coreApi->getDroneVersion();
+      printf("Sample App for STM32F4Discovery Board:\r\n");
+      delay_nms(30);
+
+      printf("\nPrerequisites:\r\n");
+      printf("1. Vehicle connected to the Assistant and simulation is ON\r\n");
+      printf("2. Battery fully chanrged\r\n");
+      printf("3. DJIGO App connected (for the first time run)\r\n");
+      printf("4. Gimbal mounted if needed\r\n");
+      delay_nms(30);
+
+      //! Initialize functional Vehicle components like
+      //! Subscription, Broabcast, Control, Camera, etc
+      v->functionalSetUp();
+      delay_nms(500);
+
+      // Check if the firmware version is compatible with this OSDK version
+      if (v->getFwVersion() < mandatoryVersionBase)
+      {
+        delete (v);  
+        return -1;
+      }
+
+      userActivate();
+      delay_nms(500);
+      /*ACK::ErrorCode ack = waitForACK();
+      if(ACK::getError(ack))
+      {
+        ACK::getErrorCodeMessage(ack, func);
+      }*/
+
+      // Verify subscription
+      v->subscribe->verify();
+      delay_nms(500);
+
+      // Obtain Control Authority
+      v->obtainCtrlAuthority();
       delay_nms(1000);
-
-      User_Activate();      
-      delay_nms(50);
-
-      next500MilTick = driver->getTimeStamp() + 500;
-			next20MilTick = driver->getTimeStamp() + 500;
-    }
-
-    if (driver->getTimeStamp() >= next500MilTick)
-    {
-      next500MilTick = driver->getTimeStamp() + 500;
-
-      // Handle user commands from mobile device
-      mobileCommandHandler(coreApi, &flight);
-
-      // Handle user commands from serial (USART2)
-      myTerminal.terminalCommandHandler(coreApi, &flight);
-    }
-
-		switch(user_flight_ctrl)
-		{
-			case VEL_USER_FLIGHT_CTRL:
-				if(driver->getTimeStamp() >= next20MilTick)
+			while(1)
+			{
+				
+				switch (sampleToRun)
 				{
-					user_flight_ctrl = 0;
-					next20MilTick = driver->getTimeStamp() + 20;
-					flightData_zkrtctrl.flag = 0x4a;
-					flightData_zkrtctrl.x = 1;
-					flightData_zkrtctrl.y = 0;
-					flightData_zkrtctrl.z = 0;
-					flight.setFlight(&flightData_zkrtctrl);					
+					case 1:
+						printf("\n\nStarting executing position control sample:\r\n");
+						delay_nms(1000);
+						// Run monitore takeoff
+						monitoredTakeOff();
+						// Run position control sample
+						moveByPositionOffset(0, 6, 0, 0);
+						moveByPositionOffset(6, 0, 0, 0);
+						moveByPositionOffset(-6, -6, 0, 0);
+					  moveByVel(1);
+						// Run monitored landing sample
+						monitoredLanding();
+						break;
+					case 2:
+						printf("\n\nStarting executing Hotpoint mission sample:\r\n");
+						delay_nms(1000);
+
+						// Run Hotpoint mission sample
+						runHotpointMission();
+						break;
+					case 3:
+						printf("\n\nStarting executing Waypoint mission sample:\r\n");
+						delay_nms(1000);
+
+						// Run Waypoint mission sample
+						runWaypointMission();
+						break;
+					case 4:
+						printf("\n\nStarting executing camera gimbal sample:\r\n");
+						delay_nms(1000);
+
+						// Run Camera Gimbal sample
+						gimbalCameraControl();
+						break;
+					case 5:
+						printf("\n\nStarting executing mobile communication sample:\r\n");
+						delay_nms(1000);
+
+						// Run Mobile Communication sample
+						v->moc->setFromMSDKCallback(parseFromMobileCallback);
+						printf(
+							"\n\nMobile callback registered. Trigger command mobile App.\r\n");
+						delay_nms(10000);
+						break;
+					case 6:
+						printf("\n\nStarting executing telemetry sample:\r\n");
+						delay_nms(1000);
+
+						// Run Telemetry sample
+						subscribeToData();
+						delay_nms(2000);
+						break;
+					case 7:
+						printf("\n\nStarting executing boardcast sample:\r\n");
+						delay_nms(1000);
+						boardcastSample();
+						break;
+					case 8:
+						printf("\n\nStarting vel control 1m/s sample:\r\n");
+						moveByVel(1);
+						break;
+					case 9:
+						printf("\n\nStarting vel control 2m/s sample:\r\n");
+						moveByVel(2);
+						break;					
+					default:
+						printf("\n\nPass as preprocessor flag to run desired sample:\r\n");
+						printf("FLIGHT_CONTROL_SAMPLE\r\n");
+						printf("HOTPOINT_MISSION_SAMPLE\r\n");
+						printf("WAYPOINT_MISSION_SAMPLE\r\n");
+						printf("CAMERA_GIMBAL_SAMPLE\r\n");
+						printf("MOBILE_SAMPLE\r\n");
+						break;
 				}
-				break;
-			case POS_USER_FLIGHT_CTRL:
-				if(driver->getTimeStamp() >= next20MilTick)
-				{
-					user_flight_ctrl = 0;
-					next20MilTick = driver->getTimeStamp() + 20;
-					flightData_zkrtctrl.flag = 0x8a;
-					flightData_zkrtctrl.x = 1;
-					flightData_zkrtctrl.y = 0;
-					flightData_zkrtctrl.z = 0;
-					flight.setFlight(&flightData_zkrtctrl);					
-				}
-				break;
-			default:
-				break;			
+					printf("please choose sample run number use command: FA FB 1X 00 FE\n");
+					delay_nms(5000);
+					myTerminal.terminalCommandHandler(v);
+					printf("sampleToRun:%d\n", sampleToRun);
+					delay_nms(2000);
+			}
 		}
-		
-    coreApi->sendPoll();
   }
 }
