@@ -242,7 +242,6 @@ public: // public methods
 
     void* p = Telemetry::TopicDataBase[topic].latest;
 
-		DSTATUS("Topic 0x%X memory addr 0x%p\n", topic, p);
     protocol->getThreadHandle()->lockMSG();
     if (p)
     {

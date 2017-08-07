@@ -178,8 +178,10 @@ TerminalCommand::terminalCommandHandler(Vehicle* vehicle)
 			break;
 		case 0x17:
 			sampleToRun = 7;
+			break;
 		case 0x18:
 			sampleToRun = 8;
+			break;
 		case 0x19:
 			sampleToRun = 9;		
 			break;		

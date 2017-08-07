@@ -38,11 +38,14 @@ public:
   {
   public:
     /*
-     * @note Deprecated in OSDK release 3.3
+     * @note Matrice 100 flight commands
      */
-    const static int TASK_GOHOME  = 1;
-    const static int TASK_TAKEOFF = 4;
-    const static int TASK_LANDING = 6;
+    typedef struct M100CMD
+    {
+      const static int goHome  = 1;
+      const static int takeOff = 4;
+      const static int landing = 6;
+    } M100CMD;
 
     /*
      * @note OSDK release 3.3
@@ -234,6 +237,12 @@ public:
                      float32_t y_forw);
   } AdvancedCtrlData; // pack(1)
 
+  // CMD data supported in Matrice 100
+  typedef struct M100CMDData
+  {
+    uint8_t sequence;
+    uint8_t cmd;
+  } M100CMDData; // pack (1)
 #pragma pack()
 
   /*! @note
@@ -372,20 +381,6 @@ public:
    */
   void velocityAndYawRateCtrl(float32_t Vx, float32_t Vy, float32_t Vz,
                               float32_t yawRate);
-	
-  /*! @brief Control the velocity and yaw rate of the vehicle.   //ADD BY YANLY
-   *  The reference frame is the DJI::OSDK::Control::HORIZONTAL_BODY (FRU).
-   *
-   *  @param Vx velocity set-point in x axis of body frame (m/s), input limit
-   * see DJI::OSDK::Control::HORIZONTAL_VELOCITY
-   *  @param Vy velocity set-point in y axis of body frame (m/s), input limit
-   * see DJI::OSDK::Control::HORIZONTAL_VELOCITY
-   *  @param Vz velocity set-point in z axis of body frame (m/s), input limit
-   * see DJI::OSDK::Control::VERTICAL_VELOCITY
-   *  @param yawRate yawRate set-point (deg/s)
-   */
-  void velocityAndYawRateCtrlBody(float32_t Vx, float32_t Vy, float32_t Vz,
-                              float32_t yawRate);
 
   /*! @brief Control the attitude and vertical position of the vehicle
    *
@@ -427,6 +422,24 @@ public:
    */
   static void actionCallback(Vehicle* vehiclePtr, RecvContainer recvFrame,
                              UserData userData);
+
+private:
+  /*! @brief Wrapper function for arming/disarming the motors
+   *  @note Supported in Matrice 100
+   *  @return ACK::ErrorCode struct with the acknowledgment from the FC
+   */
+  ACK::ErrorCode setArm(bool armSetting, int timeout);
+  /*! @brief Wrapper function for arming/disarming the motors
+   *  @note Supported on Matrice 100. If user does not provide his/her
+   *  own callback, default callback will be executed.
+   */
+  void setArm(bool armSetting, VehicleCallBack callback = 0,
+              UserData userData = 0);
+
+  /*
+   * Task CMD data to send to the flight controller (supported in Matrice 100)
+   */
+  M100CMDData m100CMDData;
 }; // class Control
 
 } // OSDK

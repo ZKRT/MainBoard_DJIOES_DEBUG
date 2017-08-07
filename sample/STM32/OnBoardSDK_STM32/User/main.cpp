@@ -94,9 +94,11 @@ main()
       delay_nms(500);
 
       // Check if the firmware version is compatible with this OSDK version
-      if (v->getFwVersion() < mandatoryVersionBase)
+      if (v->getFwVersion() < extendedVersionBase &&
+			v->getFwVersion() != Version::M100_31)
       {
-        delete (v);  
+				printf("Upgrade firmware using Assistant software!\n");
+        delete (v);
         return -1;
       }
 
@@ -109,8 +111,11 @@ main()
       }*/
 
       // Verify subscription
-      v->subscribe->verify();
-      delay_nms(500);
+      if (v->getFwVersion() != Version::M100_31)
+      {
+        v->subscribe->verify();
+        delay_nms(500);
+      }
 
       // Obtain Control Authority
       v->obtainCtrlAuthority();
@@ -129,7 +134,6 @@ main()
 						moveByPositionOffset(0, 6, 0, 0);
 						moveByPositionOffset(6, 0, 0, 0);
 						moveByPositionOffset(-6, -6, 0, 0);
-					  moveByVel(1);
 						// Run monitored landing sample
 						monitoredLanding();
 						break;
@@ -169,13 +173,21 @@ main()
 						delay_nms(1000);
 
 						// Run Telemetry sample
-						subscribeToData();
-						delay_nms(2000);
+						if (v->getFwVersion() == Version::M100_31)
+						{
+							getBroadcastData();
+						}
+						else
+						{
+							subscribeToData();
+						}
+
+						delay_nms(10000);
 						break;
 					case 7:
 						printf("\n\nStarting executing boardcast sample:\r\n");
 						delay_nms(1000);
-						boardcastSample();
+						getBroadcastData();
 						break;
 					case 8:
 						printf("\n\nStarting vel control 1m/s sample:\r\n");

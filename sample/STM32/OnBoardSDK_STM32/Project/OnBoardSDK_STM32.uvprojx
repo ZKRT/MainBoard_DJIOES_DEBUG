@@ -802,6 +802,11 @@
               <FileType>8</FileType>
               <FilePath>..\..\..\..\osdk-core\hal\src\dji_log.cpp</FilePath>
             </File>
+            <File>
+              <FileName>dji_virtual_rc.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\..\..\..\osdk-core\api\src\dji_virtual_rc.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
