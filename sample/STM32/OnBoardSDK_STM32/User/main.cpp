@@ -36,6 +36,10 @@
 #define sample_flag 5
 #elif TELEMETRY_SAMPLE
 #define sample_flag 6
+#elif BOARDCAST_SAMPLE
+#define sample_flag 7
+#elif MFIO_SAMPLE
+#define sample_flag 10
 #endif
 
 int sampleToRun = sample_flag;
@@ -196,7 +200,11 @@ main()
 					case 9:
 						printf("\n\nStarting vel control 2m/s sample:\r\n");
 						moveByVel(2);
-						break;					
+						break;
+					case 10:
+						mfio_pwmout_config();
+						mfio_pwmout();
+						break;
 					default:
 						printf("\n\nPass as preprocessor flag to run desired sample:\r\n");
 						printf("FLIGHT_CONTROL_SAMPLE\r\n");
@@ -206,7 +214,7 @@ main()
 						printf("MOBILE_SAMPLE\r\n");
 						break;
 				}
-					printf("please choose sample run number use command: FA FB 1X 00 FE\n");
+					printf("please choose sample run number use command: FA FB 1X 00 FE\n");  //zkrt_debug
 					delay_nms(5000);
 					myTerminal.terminalCommandHandler(v);
 					printf("sampleToRun:%d\n", sampleToRun);

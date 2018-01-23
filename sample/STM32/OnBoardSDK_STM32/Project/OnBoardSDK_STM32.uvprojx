@@ -497,6 +497,11 @@
               <FileType>8</FileType>
               <FilePath>..\User\BoardcastSample.cpp</FilePath>
             </File>
+            <File>
+              <FileName>MfioSample.cpp</FileName>
+              <FileType>8</FileType>
+              <FilePath>..\User\MfioSample.cpp</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

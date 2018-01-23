@@ -25,12 +25,23 @@ getBroadcastData()
   int elapsedTimeInMs = 0;
   int timeToPrintInMs = 2000;
 
-  // We will listen to five broadcast data sets:
-  // 1. Flight Status
-  // 2. Global Position
-  // 3. RC Channels
-  // 4. Velocity
-  // 5. Quaternion
+  // We will listen to 14 broadcast data sets:
+  /* Channels definition for A3/N3
+   * 0 - Timestamp
+   * 1 - Attitude Quaterniouns
+   * 2 - Acceleration
+   * 3 - Velocity (Ground Frame)
+   * 4 - Angular Velocity (Body Frame)
+   * 5 - Position
+   * 6 - GPS Detailed Information
+   * 7 - RTK Detailed Information
+   * 8 - Magnetometer
+   * 9 - RC Channels Data
+   * 10 - Gimbal Data
+   * 11 - Flight Statusack
+   * 12 - Battery Level
+   * 13 - Control Information
+   */
 
   // Please make sure your drone is in simulation mode. You can
   // fly the drone with your RC to get different values.
@@ -55,22 +66,41 @@ getBroadcastData()
     rc             = v->broadcast->getRC();
     velocity       = v->broadcast->getVelocity();
     quaternion     = v->broadcast->getQuaternion();
-
+		
     printf("Counter = %d:\n", elapsedTimeInMs);
     printf("-------\n");
-    printf("Flight Status = %d\n", (unsigned)status.flight);
-    printf("Position (LLA) = %.3f, %.3f, %.3f\n", globalPosition.latitude,
-           globalPosition.longitude, globalPosition.altitude);
-    printf("RC Commands (r/p/y/thr) = %d, %d, %d, %d\n", rc.roll, rc.pitch,
-           rc.yaw, rc.throttle);
-    printf("Velocity (vx,vy,vz) = %.3f, %.3f, %.3f\n", velocity.x, velocity.y,
-           velocity.z);
-    printf("Attitude Quaternion (w,x,y,z) = %.3f, %.3f, %.3f, %.3f\n",
-           quaternion.q0, quaternion.q1, quaternion.q2, quaternion.q3);
-		printf("height = %f\n", v->broadcast->getGlobalPosition().height);
-	  printf("controlDevice(dS) = %d\n",v->broadcast->getSDKInfo().deviceStatus);
+		printf("timestemp (ms/ns) = %d, %d\n", v->broadcast->getTimeStamp().time_ms, v->broadcast->getTimeStamp().time_ns); //this is the duration after last time the flight controller power cycled.
+    printf("Attitude Quaternion (w,x,y,z) = %.3f, %.3f, %.3f, %.3f\n", quaternion.q0, quaternion.q1, quaternion.q2, quaternion.q3);		
+    printf("Acceleration (vx,vy,vz) = %.3f, %.3f, %.3f\n", v->broadcast->getAcceleration().x, v->broadcast->getAcceleration().y, 
+				v->broadcast->getAcceleration().z);
+    printf("Velocity (vx,vy,vz) = %.3f, %.3f, %.3f\n", velocity.x, velocity.y, velocity.z);
+    printf("AngularRate (vx,vy,vz) = %.3f, %.3f, %.3f\n", v->broadcast->getAngularRate().x, v->broadcast->getAngularRate().y, 
+				v->broadcast->getAngularRate().z);
+    printf("VelocityInfo(health/reserve) = %d, %d\n", v->broadcast->getVelocityInfo().health, v->broadcast->getVelocityInfo().reserve);					 
+    printf("GlobalPosition (height/lat/longi/alt/health) = %.3f, %.3f, %.3f, %.3f, %d\n", globalPosition.height, globalPosition.latitude, 
+				globalPosition.longitude, globalPosition.altitude, globalPosition.health);
+		printf("gpsinfo(date/time) = %d, %d\n", v->broadcast->getGPSInfo().time.date, v->broadcast->getGPSInfo().time.time);//日期挺准，时间小时不准，分钟秒倒是挺准
+    printf("RC Commands (r/p/y/thr/mode/gear) = %d, %d, %d, %d, %d, %d\n", rc.roll, rc.pitch, rc.yaw, rc.throttle, rc.mode, rc.gear);		
+    printf("Gimbal (r/p/y/rl/pl/yl) = %.3f, %.3f, %.3f, %d, %d, %d\n", v->broadcast->getGimbal().roll, v->broadcast->getGimbal().pitch, 
+				v->broadcast->getGimbal().yaw, v->broadcast->getGimbal().rollLimit, v->broadcast->getGimbal().pitchLimit, v->broadcast->getGimbal().yawLimit);		
+    //测试发现：yaw角度回馈范围在-180度~+180度，以横轴为分割线考虑，假设上端为正，假设从左往右递增角度为0~180，下端为负，-0~-180，在交界处转换，符号变反。
+/**************************************
+*              90  
+*         60       120    
+*     30                150
+*  0                         180
+* -0                        -180
+*    -30               -150
+*		     -60      -120
+*				      -90
+***************************************/
+    printf("Status (flight/error/gear/mode) = %d, %d, %d, %d\n", (unsigned)status.flight, status.error, status.gear, status.mode);
+    printf("Battery (capacity/cur/percent/v) = %d, %d, %d, %d\n", v->broadcast->getBatteryInfo().capacity, v->broadcast->getBatteryInfo().current, 
+				v->broadcast->getBatteryInfo().percentage, v->broadcast->getBatteryInfo().voltage);	
+	  printf("SDKInfo(devs/ctrm/fs/vrcs/reser) = %d, %d, %d, %d, %d\n", v->broadcast->getSDKInfo().deviceStatus, v->broadcast->getSDKInfo().controlMode, 
+				v->broadcast->getSDKInfo().flightStatus, v->broadcast->getSDKInfo().vrcStatus, v->broadcast->getSDKInfo().reserved);
     printf("-------\n\n");
-
+		
     elapsedTimeInMs += 50;
 		delay_nms(500); //zkrt
   }

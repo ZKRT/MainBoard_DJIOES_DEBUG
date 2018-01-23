@@ -17,6 +17,7 @@
 #include "FlightControlSample.h"
 #include "MissionSample.h"
 #include "MobileSample.h"
+#include "MfioSample.h"
 #include "Receive.h"
 #include "TelemetrySample.h"
 #include "bsp.h"
