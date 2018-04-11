@@ -1,3 +1,32 @@
+/*! @file MobileSample.cpp
+ *  @version 3.3
+ *  @date May 2017
+ *
+ *  @brief
+ *  MSDK Communication STM32 example.
+ *
+ *  @Copyright (c) 2016-2017 DJI
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
+
 #include "MobileSample.h"
 
 using namespace DJI;
@@ -56,12 +85,12 @@ controlAuthorityMobileCallback(Vehicle* vehiclePtr, RecvContainer recvFrame,
                                DJI::OSDK::UserData userData)
 {
   ACK::ErrorCode ack;
-  ack.data = OpenProtocol::ErrorCode::CommonACK::NO_RESPONSE_ERROR;
+  ack.data = OpenProtocolCMD::ErrorCode::CommonACK::NO_RESPONSE_ERROR;
 
   unsigned char data    = 0x1;
   int           cbIndex = vehiclePtr->callbackIdIndex();
 
-  if (recvFrame.recvInfo.len - Protocol::PackageMin <= sizeof(uint16_t))
+  if (recvFrame.recvInfo.len - OpenProtocol::PackageMin <= sizeof(uint16_t))
   {
     ack.data = recvFrame.recvData.ack;
     ack.info = recvFrame.recvInfo;
@@ -71,12 +100,12 @@ controlAuthorityMobileCallback(Vehicle* vehiclePtr, RecvContainer recvFrame,
     DERROR("ACK is exception, sequence %d\n", recvFrame.recvInfo.seqNumber);
   }
 
-  if (ack.data == OpenProtocol::ErrorCode::ControlACK::SetControl::
+  if (ack.data == OpenProtocolCMD::ErrorCode::ControlACK::SetControl::
                     OBTAIN_CONTROL_IN_PROGRESS)
   {
     vehiclePtr->obtainCtrlAuthority(controlAuthorityMobileCallback);
   }
-  else if (ack.data == OpenProtocol::ErrorCode::ControlACK::SetControl::
+  else if (ack.data == OpenProtocolCMD::ErrorCode::ControlACK::SetControl::
                          RELEASE_CONTROL_IN_PROGRESS)
   {
     vehiclePtr->releaseCtrlAuthority(controlAuthorityMobileCallback);
@@ -107,7 +136,7 @@ actionMobileCallback(Vehicle* vehiclePtr, RecvContainer recvFrame,
 {
   ACK::ErrorCode ack;
 
-  if (recvFrame.recvInfo.len - Protocol::PackageMin <= sizeof(uint16_t))
+  if (recvFrame.recvInfo.len - OpenProtocol::PackageMin <= sizeof(uint16_t))
   {
 
     ack.info = recvFrame.recvInfo;
@@ -127,7 +156,7 @@ actionMobileCallback(Vehicle* vehiclePtr, RecvContainer recvFrame,
     // startMotor supported in FW version >= 3.3
     // setArm supported only on Matrice 100
     if (recvFrame.recvInfo.buf[2] == Control::FlightCommand::startMotor ||
-        (memcmp(cmd, OpenProtocol::CMDSet::Control::setArm, sizeof(cmd)) &&
+        (memcmp(cmd, OpenProtocolCMD::CMDSet::Control::setArm, sizeof(cmd)) &&
          recvFrame.recvInfo.buf[2] == true))
     {
       mobileAck.cmdID = 0x05;
@@ -136,7 +165,7 @@ actionMobileCallback(Vehicle* vehiclePtr, RecvContainer recvFrame,
                                       sizeof(mobileAck));
     }
     else if (recvFrame.recvInfo.buf[2] == Control::FlightCommand::stopMotor ||
-             (memcmp(cmd, OpenProtocol::CMDSet::Control::setArm, sizeof(cmd)) &&
+             (memcmp(cmd, OpenProtocolCMD::CMDSet::Control::setArm, sizeof(cmd)) &&
               recvFrame.recvInfo.buf[2] == false))
     {
 			mobileAck.cmdID = 0x06;
